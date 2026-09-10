@@ -1,0 +1,88 @@
+第一步：强制切换到 MAXN 模式并立刻重启
+请在终端里直接复制粘贴这条带有自动确认或强制重启的命令（二选一）：
+
+方法 A：交互式确认（推荐）
+
+Bash
+sudo nvpmodel -m 0
+当终端提示 DO YOU WANT TO REBOOT NOW? enter YES/yes to confirm: 时，直接手动输入键盘上的 yes 并回车，盒子会自动重启并应用 MAXN 模式。
+
+方法 B：一条命令强制应用并重启
+
+Bash
+sudo nvpmodel -m 0 --force && sudo reboot
+第二步：开机重启后，锁死最高时钟频率（最关键的一步！）
+系统重启完毕并重新登录你的 whu 桌面后，nvpmodel -m 0 只是把功率天花板解锁了，但默认依然是“动态节能调频”的。你必须再次执行以下命令，把频率锁死在最高峰值：
+
+Bash
+# 1. 确认当前的模式已经成功变成 0 (MAXN)
+sudo nvpmodel -q
+
+# 2. 锁死 CPU、GPU 和 EMC (内存控制器) 的时钟频率
+sudo jetson_clocks
+
+# 3. 检查 EMC 内存总线频率是否已经拉满（观察 EMC 这一行是否达到了最高 Freq）
+sudo jetson_clocks --show
+
+
+
+开机自启动：
+好的，给你最简洁的配置步骤：
+
+1. 创建 service 文件
+bash
+sudo nano /etc/systemd/system/polar_streamer.service
+粘贴以下内容：
+
+ini
+[Unit]
+Description=Polar Streamer Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/polar_streamer
+ExecStart=/opt/polar_streamer/my_streamer
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+保存退出（Ctrl+X, Y, Enter）
+
+2. 配置日志限制 1G
+bash
+sudo nano /etc/systemd/journald.conf
+修改以下配置（去掉 # 号）：
+
+text
+SystemMaxUse=1G
+SystemMaxFileSize=500M
+保存退出
+
+3. 重启 journald 并启用服务
+bash
+sudo systemctl restart systemd-journald
+sudo systemctl daemon-reload
+sudo systemctl enable polar_streamer.service
+sudo systemctl start polar_streamer.service
+4. 验证
+bash
+sudo systemctl status polar_streamer.service
+sudo journalctl -u polar_streamer -f
+常用命令
+bash
+# 查看日志
+sudo journalctl -u polar_streamer -f
+
+# 重启服务
+sudo systemctl restart polar_streamer
+
+# 停止服务
+sudo systemctl stop polar_streamer
+
+# 查看状态
+sudo systemctl status polar_streamer

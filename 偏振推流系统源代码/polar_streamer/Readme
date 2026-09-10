@@ -1,0 +1,45 @@
+windows端接收图像：
+gst-launch-1.0 udpsrc port=5000 caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H265, payload=(int)96" ! rtph265depay ! h265parse ! avdec_h265 ! videoconvert ! videoscale ! video/x-raw ! d3d11videosink sync=false
+
+windows端接收并保存图像：
+gst-launch-1.0 udpsrc port=5000 caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H265, payload=(int)96" ! rtph265depay ! h265parse ! avdec_h265 ! videoconvert ! videoscale ! video/x-raw ! pngenc ! multifilesink location="frame_%05d.png"
+
+
+(base) nvidia@ubuntu:~/dj_project/111$ gst-inspect-1.0 nvv4l2h265enc
+Factory Details:
+  Rank                     primary + 1 (257)
+  Long-name                V4L2 H.265 Encoder
+  Klass                    Codec/Encoder/Video
+  Description              Encode H.265 video streams via V4L2 API
+  Author                   Viranjan Pagar <vpagar@nvidia.com>, Amit Pandya <apandya@nvidia.com>
+
+Plugin Details:
+  Name                     nvvideo4linux2
+  Description              Nvidia elements for Video 4 Linux
+  Filename                 /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstnvvideo4linux2.so
+  Version                  1.14.0
+  License                  LGPL
+  Source module            nvvideo4linux2
+  Binary package           nvvideo4linux2
+  Origin URL               http://nvidia.com/
+
+GObject
+ +----GInitiallyUnowned
+       +----GstObject
+             +----GstElement
+                   +----GstVideoEncoder
+                         +----GstV4l2VideoEnc
+                               +----GstV4l2H265Enc
+
+
+linux和windows端滚动球联调设置：
+gst-launch-1.0 videotestsrc pattern=ball ! \
+>     'video/x-raw,width=1280,height=720,framerate=10/1' ! \
+>     nvvidconv ! \
+>     'video/x-raw(memory:NVMM),format=NV12' ! \
+>     nvv4l2h265enc bitrate=5000000 ! \
+>     h265parse config-interval=-1 ! \
+>     rtph265pay mtu=1400 ! \
+>     udpsink host=192.168.100.10 port=5000 sync=false
+
+gst-launch-1.0 -v udpsrc port=5000 caps="application/x-rtp,media=video,clock-rate=90000,encoding-name=H265,payload=96" ! rtpjitterbuffer latency=300 ! rtph265depay ! h265parse ! d3d11h265dec ! d3d11videosink sync=false
