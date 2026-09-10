@@ -1,0 +1,15 @@
+# 相机工具包（太大，不纳入版本管理）
+偏振相机EzCapture/
+*.zip
+*.7z
+*.rar
+*.exe
+*.dll
+*.so
+
+# 编译产物
+*.o
+*.out
+build/
+__pycache__/
+*.pyc
